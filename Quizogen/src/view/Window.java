@@ -29,7 +29,6 @@ import fr.swampwolf.events.EventHandler;
 import fr.swampwolf.events.EventManager;
 import fr.swampwolf.events.interfaces.Observer;
 
-
 public class Window implements Observer {
 
 	/** Constants **/
@@ -44,12 +43,13 @@ public class Window implements Observer {
 	private JButton button_open;
 	private JPanel question_panel;
 	private JButton button_ok;
-	
+
 	/** Control **/
 	private EventManager ev_man;
 	private Controller controller;
+	private boolean correction = false;
+	private Question current_question;
 	
-
 	public Window(EventManager ev_man, Controller controller) {
 		this.ev_man = ev_man;
 		ev_man.addObserver(this);
@@ -84,7 +84,8 @@ public class Window implements Observer {
 
 				// SETUP cpane:top:center_panel:fc_panel:row1
 				JPanel row_filechooser = new JPanel();
-				row_filechooser.setLayout(new BoxLayout(row_filechooser, BoxLayout.X_AXIS));
+				row_filechooser.setLayout(new BoxLayout(row_filechooser,
+						BoxLayout.X_AXIS));
 				row_filechooser.setBorder(EMPTY_BORDER);
 				{
 					JComponent row = row_filechooser;
@@ -93,14 +94,13 @@ public class Window implements Observer {
 				north_panel.add(row_filechooser);
 			}
 			panel.add(north_panel, BorderLayout.NORTH);
-			//panel.add(question_panel, BorderLayout.CENTER);
-			
+			// panel.add(question_panel, BorderLayout.CENTER);
+
 			JPanel south_panel = new JPanel();
 			south_panel.setLayout(new BoxLayout(south_panel, BoxLayout.Y_AXIS));
 			south_panel.add(question_panel);
 			south_panel.add(button_ok);
 			panel.add(south_panel, BorderLayout.CENTER);
-
 		}
 
 		frame.setContentPane(panel);
@@ -127,24 +127,56 @@ public class Window implements Observer {
 
 	private void initActions() {
 
-		//Open
+		// Open
 		button_open.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				int returnVal = fc_chooser.showOpenDialog(null);
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
-					ev_man.fire(new FileLoadRequest(fc_chooser.getSelectedFile()));
+					ev_man.fire(new FileLoadRequest(fc_chooser
+							.getSelectedFile()));
 				}
 			}
 		});
+
+		// OK
+		button_open.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				ev_man.fire(new OKButtonEvent());
+				if (!correction) {
+					revealCorrection();
+				}
+			}
+		});
+
 	}
 
 	@EventHandler
 	public void on(NextQuestionEvent event) {
 		Question q = event.getQuestion();
 		UpdateQuestionPanel(q);
+		current_queston = q;
 	}
 
+	private void revealCorrection() {
+		question_panel.removeAll();
+		
+			Iterator<String> it = current_question.getText().iterator();
+			while (it.hasNext()) {
+				String str = it.next();
+				if (!atField) {
+					question_panel.add(new JLabel(str));
+				} else {
+					question_panel.add(new JTextField(10));
+				}
+				atField = !atField;
+			}
+		}
+		question_panel.validate();
+		question_panel.repaint();
+	}
+	
 	private void UpdateQuestionPanel(Question question) {
 		boolean atField = false;
 		question_panel.removeAll();
@@ -162,7 +194,5 @@ public class Window implements Observer {
 		}
 		question_panel.validate();
 		question_panel.repaint();
-
 	}
-
 }

@@ -1,6 +1,7 @@
 package control;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 
 import model.Question;
@@ -10,13 +11,16 @@ import event.NextQuestionEvent;
 import fr.swampwolf.events.EventHandler;
 import fr.swampwolf.events.EventManager;
 import fr.swampwolf.events.interfaces.Observer;
+import view.OKButtonEvent;
 import view.Window;
 
 public class Controller implements Observer {
 
-	EventManager ev_man;
-	Window window;
+	private EventManager ev_man;
+	private Window window;
 	private List<Question> questions;
+	private Iterator<Question> it;
+	private boolean correction; 
 
 	public static void main(String[] args) {
 		new Controller();
@@ -27,8 +31,16 @@ public class Controller implements Observer {
 		ev_man.addObserver(this);
 		window = new Window(ev_man, this);
 		questions = null;
+		correction = false;
 	}
 
+	@EventHandler
+	public void on(OKButtonEvent event) {
+		if (!correction) {
+			
+		}
+	}
+	
 	@EventHandler
 	public void on(FileLoadRequest event) {
 		QuizoParser qp = new QuizoParser();
@@ -38,11 +50,10 @@ public class Controller implements Observer {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		if (questions != null) {
+		if (questions != null && questions.size()>0) {
 			ev_man.fire(new FileLoadedEvent(questions));
-			ev_man.fire(new NextQuestionEvent(questions.get(0)));
+			it = questions.iterator();
+			ev_man.fire(new NextQuestionEvent(it.next()));
 		}
 	}
 }
-// TODO: Put ok button under question by placing the Q pane in a vertical box,
-// in the center, with the lower column containing the OK

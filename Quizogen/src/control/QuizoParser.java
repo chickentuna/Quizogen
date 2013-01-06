@@ -15,9 +15,7 @@ public class QuizoParser {
 	private static final String SEPARATOR = "Q";
 	private static final char BLOCK_START = '{';
 	private static final char BLOCK_END = '}';
-	
-	
-	
+		
 	public ArrayList<Question> parse(File file) throws IOException {
 		input = new BufferedReader(new FileReader(file));
 		ArrayList<Question> questions = new ArrayList<Question>();
