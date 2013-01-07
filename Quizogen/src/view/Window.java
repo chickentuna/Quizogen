@@ -8,6 +8,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.util.Iterator;
+import java.util.LinkedList;
+
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -49,11 +51,13 @@ public class Window implements Observer {
 	private Controller controller;
 	private boolean correction = false;
 	private Question current_question;
-	
+	private LinkedList<JTextField> answers;
+
 	public Window(EventManager ev_man, Controller controller) {
 		this.ev_man = ev_man;
 		ev_man.addObserver(this);
 		this.controller = controller;
+		answers = new LinkedList<>();
 		initComponents();
 		initActions();
 		buildFrame();
@@ -140,7 +144,7 @@ public class Window implements Observer {
 		});
 
 		// OK
-		button_open.addActionListener(new ActionListener() {
+		button_ok.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				ev_man.fire(new OKButtonEvent());
@@ -154,29 +158,53 @@ public class Window implements Observer {
 
 	@EventHandler
 	public void on(NextQuestionEvent event) {
+		answers = new LinkedList<>();
+		
 		Question q = event.getQuestion();
 		UpdateQuestionPanel(q);
-		current_queston = q;
+		current_question = q;
 	}
 
 	private void revealCorrection() {
-		question_panel.removeAll();
-		
-			Iterator<String> it = current_question.getText().iterator();
-			while (it.hasNext()) {
-				String str = it.next();
-				if (!atField) {
-					question_panel.add(new JLabel(str));
-				} else {
-					question_panel.add(new JTextField(10));
-				}
-				atField = !atField;
-			}
+		Iterator<JTextField> it = answers.iterator();
+		LinkedList<String> guess = new LinkedList<>();
+		while (it.hasNext()) {
+			saveText(guess,it.next());
 		}
+		question_panel.removeAll();
+		boolean atField = false;
+		Iterator<String> itq = current_question.getText().iterator();
+		Iterator<String> ita = guess.iterator();
+		while (itq.hasNext()) {
+			String str = itq.next();
+			if (!atField) {
+				question_panel.add(new JLabel(str));
+			} else {
+				revealCorrectionOver(str,ita.next());
+			}
+			atField = !atField;
+		}
+
 		question_panel.validate();
 		question_panel.repaint();
 	}
-	
+
+	private void revealCorrectionOver(String str, String guess) {
+		if (str.equals(guess)) {
+			question_panel.add(new JLabel("<html><font color = #00FF00 >"+str+"</font></html>"));
+			//00FF00=Green
+		} else {
+			question_panel.add(new JLabel("<html><font color = #FF0000 ><s>"+guess+"</s></font></html>"));
+			//FF0000=Red
+		}
+		
+	}
+
+	private void saveText(LinkedList<String> guess, JTextField field) {
+		guess.add(field.getText());
+		
+	}
+
 	private void UpdateQuestionPanel(Question question) {
 		boolean atField = false;
 		question_panel.removeAll();
@@ -187,7 +215,9 @@ public class Window implements Observer {
 				if (!atField) {
 					question_panel.add(new JLabel(str));
 				} else {
-					question_panel.add(new JTextField(10));
+					JTextField field = new JTextField(10);
+					answers.add(field);
+					question_panel.add(field);
 				}
 				atField = !atField;
 			}
