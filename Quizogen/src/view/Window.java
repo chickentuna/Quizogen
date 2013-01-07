@@ -37,6 +37,8 @@ public class Window implements Observer {
 	private static final Border EMPTY_BORDER = BorderFactory.createEmptyBorder(
 			0, 10, 10, 10);
 	private static final String L_LABEL_TITLE = "Quizogen";
+	private static final String CORRECT_COLOUR = "00FF00";
+	private static final String INCORRECT_COLOUR = "FF0000";
 
 	/** Components **/
 	private JFrame frame;
@@ -191,11 +193,9 @@ public class Window implements Observer {
 
 	private void revealCorrectionOver(String str, String guess) {
 		if (str.equals(guess)) {
-			question_panel.add(new JLabel("<html><font color = #00FF00 >"+str+"</font></html>"));
-			//00FF00=Green
+			question_panel.add(new JLabel("<html><font color = #"+CORRECT_COLOUR+" >"+str+"</font></html>"));
 		} else {
-			question_panel.add(new JLabel("<html><font color = #FF0000 ><s>"+guess+"</s></font></html>"));
-			//FF0000=Red
+			question_panel.add(new JLabel("<html><font color = #"+INCORRECT_COLOUR+" ><s>"+guess+"</s></font></html>"));
 		}
 		
 	}
