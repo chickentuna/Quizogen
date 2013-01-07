@@ -25,8 +25,12 @@ import javax.swing.border.Border;
 import model.Question;
 
 import control.Controller;
+import event.CorrectionEvent;
+import event.EndOfQuizzEvent;
 import event.FileLoadRequest;
+import event.FileLoadedEvent;
 import event.NextQuestionEvent;
+import event.NextQuestionRequest;
 import fr.swampwolf.events.EventHandler;
 import fr.swampwolf.events.EventManager;
 import fr.swampwolf.events.interfaces.Observer;
@@ -37,7 +41,7 @@ public class Window implements Observer {
 	private static final Border EMPTY_BORDER = BorderFactory.createEmptyBorder(
 			0, 10, 10, 10);
 	private static final String L_LABEL_TITLE = "Quizogen";
-	private static final String CORRECT_COLOUR = "00FF00";
+	private static final String CORRECT_COLOUR = "0AFF0A";
 	private static final String INCORRECT_COLOUR = "FF0000";
 
 	/** Components **/
@@ -45,12 +49,11 @@ public class Window implements Observer {
 	private JPanel panel;
 	private JFileChooser fc_chooser;
 	private JButton button_open;
-	private JPanel question_panel;
+	private JPanel panel_question;
 	private JButton button_ok;
 
 	/** Control **/
 	private EventManager ev_man;
-	private Controller controller;
 	private boolean correction = false;
 	private Question current_question;
 	private LinkedList<JTextField> answers;
@@ -58,7 +61,6 @@ public class Window implements Observer {
 	public Window(EventManager ev_man, Controller controller) {
 		this.ev_man = ev_man;
 		ev_man.addObserver(this);
-		this.controller = controller;
 		answers = new LinkedList<>();
 		initComponents();
 		initActions();
@@ -104,7 +106,7 @@ public class Window implements Observer {
 
 			JPanel south_panel = new JPanel();
 			south_panel.setLayout(new BoxLayout(south_panel, BoxLayout.Y_AXIS));
-			south_panel.add(question_panel);
+			south_panel.add(panel_question);
 			south_panel.add(button_ok);
 			panel.add(south_panel, BorderLayout.CENTER);
 		}
@@ -123,10 +125,11 @@ public class Window implements Observer {
 	private void initComponents() {
 		frame = new javax.swing.JFrame();
 		panel = new JPanel();
-		question_panel = new JPanel();
-		question_panel.add(new JLabel("Questions go here"));
+		panel_question = new JPanel();
+		panel_question.add(new JLabel("Questions go here"));
 		button_open = new JButton("Open");
 		button_ok = new JButton("OK");
+		button_ok.setEnabled(false);
 		button_open.setMnemonic(KeyEvent.VK_O);
 		fc_chooser = new JFileChooser();
 	}
@@ -149,9 +152,15 @@ public class Window implements Observer {
 		button_ok.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				ev_man.fire(new OKButtonEvent());
 				if (!correction) {
-					revealCorrection();
+					Iterator<JTextField> it = answers.iterator();
+					LinkedList<String> guess = new LinkedList<>();
+					while (it.hasNext()) {
+						saveText(guess, it.next());
+					}
+					ev_man.fire(new GuessEvent(guess));
+				} else {
+					ev_man.fire(new NextQuestionRequest());
 				}
 			}
 		});
@@ -159,70 +168,96 @@ public class Window implements Observer {
 	}
 
 	@EventHandler
-	public void on(NextQuestionEvent event) {
-		answers = new LinkedList<>();
-		
-		Question q = event.getQuestion();
-		UpdateQuestionPanel(q);
-		current_question = q;
+	public void on(EndOfQuizzEvent event) {
+		panel_question.removeAll();
+		panel_question.add(new JLabel("Fin du quizz. Score : "+event.getPoints()+" points."));
+		correction = false;
+		button_ok.setEnabled(false);
 	}
 
-	private void revealCorrection() {
+	@EventHandler
+	public void on(NextQuestionEvent event) {
+		answers = new LinkedList<>();
+		current_question = event.getQuestion();
+		correction = false;
+		UpdateQuestionPanel();
+	}
+
+	@EventHandler
+	public void on(FileLoadedEvent event) {
+		button_ok.setEnabled(true);
+	}
+
+	@EventHandler
+	public void on(CorrectionEvent event) {
+		revealCorrection(event.getCorrection());
+	}
+
+	private void revealCorrection(LinkedList<Boolean> truth) {
 		Iterator<JTextField> it = answers.iterator();
+		Iterator<Boolean> itt = truth.iterator();
 		LinkedList<String> guess = new LinkedList<>();
+
 		while (it.hasNext()) {
-			saveText(guess,it.next());
+			saveText(guess, it.next());
 		}
-		question_panel.removeAll();
+		panel_question.removeAll();
 		boolean atField = false;
 		Iterator<String> itq = current_question.getText().iterator();
 		Iterator<String> ita = guess.iterator();
 		while (itq.hasNext()) {
 			String str = itq.next();
 			if (!atField) {
-				question_panel.add(new JLabel(str));
+				panel_question.add(new JLabel(str));
 			} else {
-				revealCorrectionOver(str,ita.next());
+				revealCorrectionOver(str, ita.next(), itt.next());
 			}
 			atField = !atField;
 		}
 
-		question_panel.validate();
-		question_panel.repaint();
+		panel_question.validate();
+		panel_question.repaint();
 	}
 
-	private void revealCorrectionOver(String str, String guess) {
-		if (str.equals(guess)) {
-			question_panel.add(new JLabel("<html><font color = #"+CORRECT_COLOUR+" >"+str+"</font></html>"));
+	private void revealCorrectionOver(String str, String guess, boolean truth) {
+
+		if (truth) {
+			panel_question.add(new JLabel("<html><font color = #"
+					+ CORRECT_COLOUR + " >" + str + "</font></html>"));
 		} else {
-			question_panel.add(new JLabel("<html><font color = #"+INCORRECT_COLOUR+" ><s>"+guess+"</s></font></html>"));
+			panel_question
+					.add(new JLabel("<html><font color = #" + INCORRECT_COLOUR
+							+ " ><s>" + guess + "</s></font></html>"));
+			panel_question.add(new JLabel("<html><font color = #"
+					+ INCORRECT_COLOUR + " >" + str + "</font></html>"));
+
 		}
-		
+
 	}
 
 	private void saveText(LinkedList<String> guess, JTextField field) {
 		guess.add(field.getText());
-		
+
 	}
 
-	private void UpdateQuestionPanel(Question question) {
+	private void UpdateQuestionPanel() {
 		boolean atField = false;
-		question_panel.removeAll();
-		if (question != null) {
-			Iterator<String> it = question.getText().iterator();
+		panel_question.removeAll();
+		if (current_question != null) {
+			Iterator<String> it = current_question.getText().iterator();
 			while (it.hasNext()) {
 				String str = it.next();
 				if (!atField) {
-					question_panel.add(new JLabel(str));
+					panel_question.add(new JLabel(str));
 				} else {
 					JTextField field = new JTextField(10);
 					answers.add(field);
-					question_panel.add(field);
+					panel_question.add(field);
 				}
 				atField = !atField;
 			}
 		}
-		question_panel.validate();
-		question_panel.repaint();
+		panel_question.validate();
+		panel_question.repaint();
 	}
 }
