@@ -51,12 +51,16 @@ public class Window implements Observer {
 	private JButton button_open;
 	private JPanel panel_question;
 	private JButton button_ok;
+	private JLabel label_count;
+	
 
 	/** Control **/
 	private EventManager ev_man;
 	private boolean correction = false;
 	private Question current_question;
 	private LinkedList<JTextField> answers;
+	private int q_count = 0;
+	private int q_max = 0;
 
 	public Window(EventManager ev_man, Controller controller) {
 		this.ev_man = ev_man;
@@ -85,6 +89,7 @@ public class Window implements Observer {
 				{
 					JComponent row = row_title;
 					JLabel lbl_title = new JLabel(L_LABEL_TITLE);
+					label_count = new JLabel("(0/0)");
 					lbl_title.setFont(new Font("Sans serif", Font.PLAIN, 30));
 					row.add(lbl_title);
 				}
@@ -181,11 +186,14 @@ public class Window implements Observer {
 		current_question = event.getQuestion();
 		correction = false;
 		UpdateQuestionPanel();
+		q_count++;
+		label_count.setText("("+q_count+"/"+q_max+")");
 	}
 
 	@EventHandler
 	public void on(FileLoadedEvent event) {
 		button_ok.setEnabled(true);
+		q_max = event.getQuestionCount();
 	}
 
 	@EventHandler
