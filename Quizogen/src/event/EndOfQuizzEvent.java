@@ -10,9 +10,8 @@ public class EndOfQuizzEvent extends Event {
 		this.points = points;
 	}
 	
-	public String getPoints() {
-		// TODO Auto-generated method stub
-		return null;
+	public int getPoints() {
+		return points;
 	}
 
 }

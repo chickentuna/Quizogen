@@ -3,6 +3,7 @@ package view;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -19,6 +20,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.KeyStroke;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
 
@@ -41,7 +43,7 @@ public class Window implements Observer {
 	private static final Border EMPTY_BORDER = BorderFactory.createEmptyBorder(
 			0, 10, 10, 10);
 	private static final String L_LABEL_TITLE = "Quizogen";
-	private static final String CORRECT_COLOUR = "0AFF0A";
+	private static final String CORRECT_COLOUR = "00DD00";
 	private static final String INCORRECT_COLOUR = "FF0000";
 
 	/** Components **/
@@ -51,16 +53,12 @@ public class Window implements Observer {
 	private JButton button_open;
 	private JPanel panel_question;
 	private JButton button_ok;
-	private JLabel label_count;
-	
 
 	/** Control **/
 	private EventManager ev_man;
 	private boolean correction = false;
 	private Question current_question;
 	private LinkedList<JTextField> answers;
-	private int q_count = 0;
-	private int q_max = 0;
 
 	public Window(EventManager ev_man, Controller controller) {
 		this.ev_man = ev_man;
@@ -89,7 +87,6 @@ public class Window implements Observer {
 				{
 					JComponent row = row_title;
 					JLabel lbl_title = new JLabel(L_LABEL_TITLE);
-					label_count = new JLabel("(0/0)");
 					lbl_title.setFont(new Font("Sans serif", Font.PLAIN, 30));
 					row.add(lbl_title);
 				}
@@ -110,9 +107,11 @@ public class Window implements Observer {
 			// panel.add(question_panel, BorderLayout.CENTER);
 
 			JPanel south_panel = new JPanel();
-			south_panel.setLayout(new BoxLayout(south_panel, BoxLayout.Y_AXIS));
-			south_panel.add(panel_question);
-			south_panel.add(button_ok);
+			south_panel.setLayout(new BorderLayout());
+			
+			south_panel.add(panel_question,BorderLayout.CENTER);
+			south_panel.add(button_ok,BorderLayout.SOUTH);
+			
 			panel.add(south_panel, BorderLayout.CENTER);
 		}
 
@@ -131,12 +130,30 @@ public class Window implements Observer {
 		frame = new javax.swing.JFrame();
 		panel = new JPanel();
 		panel_question = new JPanel();
+		panel_question.setLayout(new FlowLayout());
 		panel_question.add(new JLabel("Questions go here"));
+		
 		button_open = new JButton("Open");
 		button_ok = new JButton("OK");
 		button_ok.setEnabled(false);
+
+		registerToEnter(button_ok, JComponent.WHEN_IN_FOCUSED_WINDOW);
+		registerToEnter(button_open, JComponent.WHEN_FOCUSED);
+
 		button_open.setMnemonic(KeyEvent.VK_O);
 		fc_chooser = new JFileChooser();
+	}
+
+	private void registerToEnter(JButton button, int condition) {
+
+		button.registerKeyboardAction(button
+				.getActionForKeyStroke(KeyStroke.getKeyStroke(
+						KeyEvent.VK_SPACE, 0, false)), KeyStroke.getKeyStroke(
+				KeyEvent.VK_ENTER, 0, false), condition);
+		button.registerKeyboardAction(button
+				.getActionForKeyStroke(KeyStroke.getKeyStroke(
+						KeyEvent.VK_SPACE, 0, true)), KeyStroke.getKeyStroke(
+				KeyEvent.VK_ENTER, 0, true), condition);		
 	}
 
 	private void initActions() {
@@ -175,9 +192,16 @@ public class Window implements Observer {
 	@EventHandler
 	public void on(EndOfQuizzEvent event) {
 		panel_question.removeAll();
-		panel_question.add(new JLabel("Fin du quizz. Score : "+event.getPoints()+" points."));
+		String plural = "s";
+		if (event.getPoints() == 1) {
+			plural = "";
+		}
+		panel_question.add(new JLabel("Fin du quizz ! Score : "
+				+ event.getPoints() + " point" + plural + "."));
 		correction = false;
 		button_ok.setEnabled(false);
+		panel_question.validate();
+		panel_question.repaint();
 	}
 
 	@EventHandler
@@ -186,19 +210,17 @@ public class Window implements Observer {
 		current_question = event.getQuestion();
 		correction = false;
 		UpdateQuestionPanel();
-		q_count++;
-		label_count.setText("("+q_count+"/"+q_max+")");
 	}
 
 	@EventHandler
 	public void on(FileLoadedEvent event) {
 		button_ok.setEnabled(true);
-		q_max = event.getQuestions().size();
 	}
 
 	@EventHandler
 	public void on(CorrectionEvent event) {
 		revealCorrection(event.getCorrection());
+		correction = true;
 	}
 
 	private void revealCorrection(LinkedList<Boolean> truth) {
@@ -233,9 +255,7 @@ public class Window implements Observer {
 			panel_question.add(new JLabel("<html><font color = #"
 					+ CORRECT_COLOUR + " >" + str + "</font></html>"));
 		} else {
-			panel_question
-					.add(new JLabel("<html><font color = #" + INCORRECT_COLOUR
-							+ " ><s>" + guess + "</s></font></html>"));
+			panel_question.add(new JLabel("<html><s>" + guess + "</s></html>"));
 			panel_question.add(new JLabel("<html><font color = #"
 					+ INCORRECT_COLOUR + " >" + str + "</font></html>"));
 
@@ -250,22 +270,13 @@ public class Window implements Observer {
 
 	private void UpdateQuestionPanel() {
 		boolean atField = false;
-		
 		panel_question.removeAll();
 		if (current_question != null) {
 			Iterator<String> it = current_question.getText().iterator();
 			while (it.hasNext()) {
 				String str = it.next();
-				if (!atField) {
-					JLabel l = new JLabel(str);
-					
-					if (l.getWidth() >= panel_question.getWidth()) {
-						JLabel l2 = new JLabel(str.substring(0,str.length()/2));
-						l = new JLabel(str.substring(str.length()/2));
-						panel_question.add(l2);
-					}
-					
-					panel_question.add(l);
+				if (!atField) {				     
+					panel_question.add(new JLabel(str));
 				} else {
 					JTextField field = new JTextField(10);
 					answers.add(field);
@@ -276,7 +287,7 @@ public class Window implements Observer {
 		}
 		panel_question.validate();
 		panel_question.repaint();
+		if (answers.size()>0)
+			answers.get(0).requestFocus();
 	}
-	
-	
 }
