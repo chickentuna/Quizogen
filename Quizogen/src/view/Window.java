@@ -193,7 +193,7 @@ public class Window implements Observer {
 	@EventHandler
 	public void on(FileLoadedEvent event) {
 		button_ok.setEnabled(true);
-		q_max = event.getQuestionCount();
+		q_max = event.getQuestions.size();
 	}
 
 	@EventHandler
