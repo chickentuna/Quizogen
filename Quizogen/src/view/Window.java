@@ -53,8 +53,10 @@ public class Window implements Observer {
 	private JButton button_open;
 	private JPanel panel_question;
 	private JButton button_ok;
+	private JLabel label_count;
 
 	/** Control **/
+	private int q_max, q_count;
 	private EventManager ev_man;
 	private boolean correction = false;
 	private Question current_question;
@@ -86,9 +88,9 @@ public class Window implements Observer {
 				row_title.setBorder(EMPTY_BORDER);
 				{
 					JComponent row = row_title;
-					JLabel lbl_title = new JLabel(L_LABEL_TITLE);
-					lbl_title.setFont(new Font("Sans serif", Font.PLAIN, 30));
-					row.add(lbl_title);
+					label_count = new JLabel(L_LABEL_TITLE);
+					label_count.setFont(new Font("Sans serif", Font.PLAIN, 30));
+					row.add(label_count);
 				}
 				north_panel.add(row_title);
 
@@ -104,14 +106,13 @@ public class Window implements Observer {
 				north_panel.add(row_filechooser);
 			}
 			panel.add(north_panel, BorderLayout.NORTH);
-			// panel.add(question_panel, BorderLayout.CENTER);
 
 			JPanel south_panel = new JPanel();
 			south_panel.setLayout(new BorderLayout());
-			
-			south_panel.add(panel_question,BorderLayout.CENTER);
-			south_panel.add(button_ok,BorderLayout.SOUTH);
-			
+
+			south_panel.add(panel_question, BorderLayout.CENTER);
+			south_panel.add(button_ok, BorderLayout.SOUTH);
+
 			panel.add(south_panel, BorderLayout.CENTER);
 		}
 
@@ -132,7 +133,7 @@ public class Window implements Observer {
 		panel_question = new JPanel();
 		panel_question.setLayout(new FlowLayout());
 		panel_question.add(new JLabel("Questions go here"));
-		
+		label_count = new JLabel("(0/0)");
 		button_open = new JButton("Open");
 		button_ok = new JButton("OK");
 		button_ok.setEnabled(false);
@@ -146,14 +147,12 @@ public class Window implements Observer {
 
 	private void registerToEnter(JButton button, int condition) {
 
-		button.registerKeyboardAction(button
-				.getActionForKeyStroke(KeyStroke.getKeyStroke(
-						KeyEvent.VK_SPACE, 0, false)), KeyStroke.getKeyStroke(
-				KeyEvent.VK_ENTER, 0, false), condition);
-		button.registerKeyboardAction(button
-				.getActionForKeyStroke(KeyStroke.getKeyStroke(
-						KeyEvent.VK_SPACE, 0, true)), KeyStroke.getKeyStroke(
-				KeyEvent.VK_ENTER, 0, true), condition);		
+		button.registerKeyboardAction(button.getActionForKeyStroke(KeyStroke
+				.getKeyStroke(KeyEvent.VK_SPACE, 0, false)), KeyStroke
+				.getKeyStroke(KeyEvent.VK_ENTER, 0, false), condition);
+		button.registerKeyboardAction(button.getActionForKeyStroke(KeyStroke
+				.getKeyStroke(KeyEvent.VK_SPACE, 0, true)), KeyStroke
+				.getKeyStroke(KeyEvent.VK_ENTER, 0, true), condition);
 	}
 
 	private void initActions() {
@@ -209,12 +208,16 @@ public class Window implements Observer {
 		answers = new LinkedList<>();
 		current_question = event.getQuestion();
 		correction = false;
+		q_count++;
+		label_count.setText("(" + q_count + "/" + q_max + ")");
 		UpdateQuestionPanel();
 	}
 
 	@EventHandler
 	public void on(FileLoadedEvent event) {
 		button_ok.setEnabled(true);
+		q_max = event.getQuestions().size();
+		q_count = 0;
 	}
 
 	@EventHandler
@@ -238,7 +241,36 @@ public class Window implements Observer {
 		while (itq.hasNext()) {
 			String str = itq.next();
 			if (!atField) {
-				panel_question.add(new JLabel(str));
+				JLabel lab = new JLabel(str);
+
+				double ratio;
+				int panic = 100;
+				do {
+					panel_question.add(lab);
+					panel_question.validate();
+					panel_question.repaint();
+					ratio = ((double) panel_question.getWidth()) / ((double) lab.getWidth());
+					if (ratio < 1) {
+						str = lab.getText();
+						int cut = (int) ((str.length() * ratio)) - 5;
+						while (cut > 1 && str.charAt(cut) != ' ') {
+							cut--;
+						}
+						if (cut < 0)
+							cut = 0;
+						JLabel lab2 = new JLabel(str.substring(0, cut));
+						panel_question.add(lab2);
+						lab.setText(str.substring(cut));
+						panel_question.remove(lab);
+					}
+					
+					if (panic-- == 0) {
+						break;
+					}
+				} while (ratio < 1);
+
+				// panel_question.add(lab);
+
 			} else {
 				revealCorrectionOver(str, ita.next(), itt.next());
 			}
@@ -275,8 +307,35 @@ public class Window implements Observer {
 			Iterator<String> it = current_question.getText().iterator();
 			while (it.hasNext()) {
 				String str = it.next();
-				if (!atField) {				     
-					panel_question.add(new JLabel(str));
+				if (!atField) {
+					JLabel lab = new JLabel(str);
+
+					double ratio;
+					int panic = 100;
+					do {
+						panel_question.add(lab);
+						panel_question.validate();
+						panel_question.repaint();
+						ratio = ((double) panel_question.getWidth()) / ((double) lab.getWidth());
+						if (ratio < 1) {
+							str = lab.getText();
+							int cut = (int) ((str.length() * ratio)) - 5;
+							while (cut > 1 && str.charAt(cut) != ' ') {
+								cut--;
+							}
+							if (cut < 0)
+								cut = 0;
+							JLabel lab2 = new JLabel(str.substring(0, cut));
+							panel_question.add(lab2);
+							lab.setText(str.substring(cut));
+							panel_question.remove(lab);
+						}
+						
+						if (panic-- == 0) {
+							break;
+						}
+					} while (ratio < 1);
+
 				} else {
 					JTextField field = new JTextField(10);
 					answers.add(field);
@@ -287,7 +346,7 @@ public class Window implements Observer {
 		}
 		panel_question.validate();
 		panel_question.repaint();
-		if (answers.size()>0)
+		if (answers.size() > 0)
 			answers.get(0).requestFocus();
 	}
 }
