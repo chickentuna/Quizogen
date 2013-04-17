@@ -250,13 +250,22 @@ public class Window implements Observer {
 
 	private void UpdateQuestionPanel() {
 		boolean atField = false;
+		
 		panel_question.removeAll();
 		if (current_question != null) {
 			Iterator<String> it = current_question.getText().iterator();
 			while (it.hasNext()) {
 				String str = it.next();
 				if (!atField) {
-					panel_question.add(new JLabel(str));
+					JLabel l = new JLabel(str);
+					
+					if (l.getWidth() >= panel_question.getWidth()) {
+						JLabel l2 = new JLabel(str.substring(0,str.length()/2));
+						l = new JLabel(str.substring(str.length()/2));
+						panel_question.add(l2);
+					}
+					
+					panel_question.add(l);
 				} else {
 					JTextField field = new JTextField(10);
 					answers.add(field);
@@ -268,4 +277,6 @@ public class Window implements Observer {
 		panel_question.validate();
 		panel_question.repaint();
 	}
+	
+	
 }
